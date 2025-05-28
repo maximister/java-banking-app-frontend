@@ -28,7 +28,6 @@ export default function DepositPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Проверка авторизации
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
@@ -37,12 +36,10 @@ export default function DepositPage() {
       return;
     }
     
-    // Если есть accountId в URL, то загружаем данные этого счета
     if (accountId) {
       fetchAccountData(accountId);
     }
     
-    // Загрузка всех счетов пользователя
     fetchUserAccounts();
   }, [accountId, router]);
 
@@ -60,7 +57,6 @@ export default function DepositPage() {
 
   const fetchUserAccounts = async () => {
     try {
-      // Получаем данные о пользователе из localStorage
       const userData = localStorage.getItem('user');
       if (!userData) return;
       
@@ -72,12 +68,9 @@ export default function DepositPage() {
         return;
       }
       
-      // Получаем все счета пользователя
       const accounts = await apiProxy.get(`/accounts/customer/${customerId}`);
       setUserAccounts(accounts || []);
       
-      // Если конкретный счет еще не выбран, но есть счета пользователя,
-      // устанавливаем первый счет как выбранный
       if (!account && accounts && accounts.length > 0) {
         setFormData(prev => ({ ...prev, targetAccountId: accounts[0].id }));
         fetchAccountData(accounts[0].id);
@@ -99,15 +92,12 @@ export default function DepositPage() {
     setClientAccounts([]);
     
     try {
-      // Поиск клиента по email
       const client = await apiProxy.get(`/customers/find/${formData.email}`);
       setFoundClient(client);
       
-      // Получение счетов клиента
       const accounts = await apiProxy.get(`/accounts/customer/${client.id}`);
       setClientAccounts(accounts || []);
       
-      // Если есть счета, выбираем первый
       if (accounts && accounts.length > 0) {
         setFormData(prev => ({ ...prev, targetAccountId: accounts[0].id }));
       } else {
@@ -128,7 +118,6 @@ export default function DepositPage() {
       [name]: value
     });
     
-    // Если меняется выбранный счет для пополнения, запрашиваем его данные
     if (name === 'targetAccountId' && transferType === 'self') {
       fetchAccountData(value);
     }
@@ -139,7 +128,6 @@ export default function DepositPage() {
     setLoading(true);
     setError(null);
 
-    // Валидация
     if (transferType !== 'other' && !formData.targetAccountId) {
       setError('Пожалуйста, выберите счет для пополнения');
       setLoading(false);
@@ -153,11 +141,9 @@ export default function DepositPage() {
     }
 
     try {
-      // Создаем транзакцию
       let transactionData = {};
       
       if (transferType === 'other') {
-        // Транзакция типа TRANSFER_IN для пополнения из другого банка
         transactionData = {
           accountId: formData.targetAccountId,
           amount: parseFloat(formData.amount),
@@ -165,7 +151,6 @@ export default function DepositPage() {
           description: formData.description || 'Пополнение из другого банка'
         };
       } else {
-        // Обычное пополнение счета
         transactionData = {
           accountId: formData.targetAccountId,
           amount: parseFloat(formData.amount),
@@ -177,7 +162,6 @@ export default function DepositPage() {
       await apiProxy.post('/transactions', transactionData);
       
       setSuccess(true);
-      // Автоматическое перенаправление через 2 секунды
       setTimeout(() => {
         router.push(`/accounts/${formData.targetAccountId}`);
       }, 2000);
@@ -193,13 +177,11 @@ export default function DepositPage() {
     setTransferType(type);
     setError(null);
     
-    // Сбрасываем поиск клиента при переключении типа
     if (type !== 'client') {
       setFoundClient(null);
       setClientAccounts([]);
     }
     
-    // Сбрасываем targetAccountId при переключении с self или client на other
     if (type === 'other') {
       setFormData(prev => ({ ...prev, targetAccountId: '' }));
     }
@@ -267,7 +249,6 @@ export default function DepositPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="deposit-form">
-              {/* Пополнение своего счета */}
               {transferType === 'self' && (
                 <div className="form-section">
                   <div className="form-group">
@@ -303,7 +284,6 @@ export default function DepositPage() {
                 </div>
               )}
 
-              {/* Пополнение счета клиента банка */}
               {transferType === 'client' && (
                 <div className="form-section">
                   <div className="form-group">
@@ -360,7 +340,6 @@ export default function DepositPage() {
                 </div>
               )}
 
-              {/* Пополнение из другого банка */}
               {transferType === 'other' && (
                 <div className="form-section">
                   <div className="form-group">
@@ -402,7 +381,6 @@ export default function DepositPage() {
                 </div>
               )}
 
-              {/* Общие поля для всех типов пополнений */}
               <div className="form-group">
                 <label htmlFor="amount">Сумма пополнения (₽)</label>
                 <input

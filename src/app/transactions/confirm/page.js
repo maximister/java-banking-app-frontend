@@ -242,14 +242,14 @@ export default function ConfirmTransactionPage() {
               </div>
               
               <div className="transaction-actions">
-                {account && parseFloat(transactionData?.amount) > account.balance && (
+                {transactionData?.operationType !== 'deposit' && account && parseFloat(transactionData?.amount) > account.balance && (
                   <div className="error-message">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/>
                       <line x1="12" y1="8" x2="12" y2="12"/>
                       <line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
-                    <span>Недостаточно средств на счете для выполнения операции</span>
+                    <span>Недостаточно средств на счете для выполнения операции!</span>
                   </div>
                 )}
                 
@@ -260,9 +260,15 @@ export default function ConfirmTransactionPage() {
                   <button 
                     className="confirm-button" 
                     onClick={handleSubmit} 
-                    disabled={submitting || (account && parseFloat(transactionData?.amount) > account.balance)}
+                    disabled={
+                      submitting || 
+                      !transactionData?.amount || 
+                      parseFloat(transactionData?.amount) <= 0 ||
+                      // Не проверяем баланс для пополнений
+                      (transactionData?.operationType !== 'deposit' && account && parseFloat(transactionData?.amount) > account.balance)
+                    }
                   >
-                    {submitting ? 'Выполнение...' : 'Подтвердить'}
+                    {submitting ? 'Выполнение...' : 'Подтвердить операцию'}
                   </button>
                 </div>
               </div>

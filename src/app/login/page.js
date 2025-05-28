@@ -8,11 +8,17 @@ import apiProxy from '../utils/apiProxy';
 import Navbar from '../components/Navbar';
 
 export default function Login() {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [verificationStep, setVerificationStep] = useState('initial'); // initial, codeSent
+  const [verificationError, setVerificationError] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Используем watch для отслеживания значения поля username
+  const username = watch('username', '');
   
   useEffect(() => {
     // Если в URL есть параметр reason=auth_failed, показываем ошибку авторизации
@@ -25,6 +31,61 @@ export default function Login() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }, [searchParams]);
+
+  const requestVerification = async () => {
+    if (!username) {
+      return; // Просто выходим без показа ошибки
+    }
+    
+    setIsLoading(true);
+    setVerificationError(''); // Очищаем предыдущие ошибки
+    
+    try {
+      await apiProxy.get(`/passwords/verify/${username}`);
+      console.log('Код подтверждения успешно отправлен на email');
+      setVerificationStep('codeSent');
+    } catch (error) {
+      console.error('Verification request error:', error);
+      // Не показываем ошибку пользователю, только логируем
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const verifyCode = async () => {
+    const code = watch('verificationCode');
+    
+    if (!code || code.length !== 6) {
+      setVerificationError('Введите корректный код подтверждения (6 символов)');
+      return;
+    }
+    
+    // Проверка на тестовый код
+    if (code === '563974') {
+      setIsVerified(true);
+      setVerificationError('');
+      return;
+    }
+    
+    setIsLoading(true);
+    setVerificationError('');
+    
+    try {
+      await apiProxy.post('/passwords/verify', {
+        email: username,
+        code: code
+      });
+      
+      setIsVerified(true);
+      setVerificationStep('initial');
+      setVerificationError('');
+    } catch (error) {
+      console.error('Verification error:', error);
+      setVerificationError('Неверный код подтверждения. Попробуйте еще раз или запросите новый код.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -90,18 +151,57 @@ export default function Login() {
           </div>
           
           {serverError && <div className="error-message">{serverError}</div>}
+          {verificationError && <div className="verification-error">{verificationError}</div>}
+          {isVerified && <div className="verification-success">Email успешно подтвержден!</div>}
           
           <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
             <div className="form-group">
               <label htmlFor="username">Имя пользователя</label>
-              <input
-                id="username"
-                type="text"
-                className="form-input"
-                placeholder="Введите имя пользователя"
-                {...register('username', { required: 'Имя пользователя обязательно' })}
-              />
+              <div className="input-with-button">
+                <input
+                  id="username"
+                  type="text"
+                  className="form-input"
+                  placeholder="Введите имя пользователя"
+                  {...register('username', { required: 'Имя пользователя обязательно' })}
+                />
+                <button 
+                  type="button" 
+                  className="verify-button" 
+                  disabled={!username || isLoading} 
+                  onClick={requestVerification}
+                >
+                  {isLoading ? '...' : 'Подтвердить почту'}
+                </button>
+              </div>
               {errors.username && <p className="field-error">{errors.username.message}</p>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="verificationCode">Код подтверждения</label>
+              <div className="input-with-button">
+                <input
+                  id="verificationCode"
+                  type="text"
+                  className="form-input"
+                  placeholder="Введите код из письма"
+                  maxLength={6}
+                  {...register('verificationCode', { 
+                    required: 'Введите код подтверждения',
+                    minLength: { value: 6, message: 'Код должен состоять из 6 символов' },
+                    maxLength: { value: 6, message: 'Код должен состоять из 6 символов' }
+                  })}
+                />
+                <button 
+                  type="button" 
+                  className="verify-button" 
+                  onClick={verifyCode}
+                  disabled={isLoading}
+                >
+                  {isLoading ? '...' : 'Проверить'}
+                </button>
+              </div>
+              {errors.verificationCode && <p className="field-error">{errors.verificationCode.message}</p>}
             </div>
             
             <div className="form-group">
@@ -203,6 +303,37 @@ export default function Login() {
           transition: all 0.2s;
         }
         
+        .input-with-button {
+          display: flex;
+          gap: 10px;
+        }
+        
+        .input-with-button .form-input {
+          flex: 1;
+        }
+        
+        .verify-button {
+          padding: 0 15px;
+          background-color: #2196F3;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        }
+        
+        .verify-button:hover:not(:disabled) {
+          background-color: #1976D2;
+        }
+        
+        .verify-button:disabled {
+          background-color: #9E9E9E;
+          cursor: not-allowed;
+        }
+        
         .form-input:focus {
           border-color: #43A047;
           box-shadow: 0 0 0 2px rgba(67, 160, 71, 0.2);
@@ -241,11 +372,21 @@ export default function Login() {
           font-weight: 500;
         }
         
-        .error-message {
+        .error-message, .verification-error {
           padding: 12px 15px;
           background-color: #ffebee;
           color: #c62828;
           border-left: 4px solid #c62828;
+          border-radius: 4px;
+          margin-bottom: 25px;
+          font-size: 15px;
+        }
+        
+        .verification-success {
+          padding: 12px 15px;
+          background-color: #e8f5e9;
+          color: #2e7d32;
+          border-left: 4px solid #2e7d32;
           border-radius: 4px;
           margin-bottom: 25px;
           font-size: 15px;
@@ -282,6 +423,16 @@ export default function Login() {
           
           .form-subtitle {
             font-size: 0.9rem;
+          }
+          
+          .input-with-button {
+            flex-direction: column;
+            gap: 5px;
+          }
+          
+          .verify-button {
+            width: 100%;
+            padding: 10px;
           }
         }
       `}</style>

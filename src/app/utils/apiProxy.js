@@ -10,7 +10,6 @@
  * @returns {Promise<any>} - Ответ от сервера
  */
 export async function fetchApi(url, method = 'GET', body = null, headers = {}) {
-  // Добавляем токен авторизации, если он есть и путь не '/users/create'
   const authHeaders = {};
   if (typeof window !== 'undefined' && url !== '/users/create' && url !== '/authentication/login') {
     const token = localStorage.getItem('token');
@@ -61,7 +60,6 @@ export async function fetchApi(url, method = 'GET', body = null, headers = {}) {
       data: data
     });
     
-    // Проверяем на ошибку авторизации
     if (response.status === 401 && typeof window !== 'undefined') {
       console.error('Ошибка авторизации 401, перенаправление на страницу входа');
       localStorage.removeItem('token');

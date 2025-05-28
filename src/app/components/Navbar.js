@@ -21,7 +21,6 @@ const Navbar = () => {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         
-        // Проверяем, есть ли у пользователя роль ADMIN или SUPER_ADMIN
         if (parsedUser.roles && (parsedUser.roles.includes('ADMIN') || parsedUser.roles.includes('SUPER_ADMIN'))) {
           setIsAdmin(true);
         }
@@ -42,7 +41,6 @@ const Navbar = () => {
     router.push('/login');
   };
 
-  // Определяем активный пункт меню
   const isActive = (path) => {
     return pathname === path || pathname?.startsWith(path + '/') ? 'active-nav-link' : '';
   };

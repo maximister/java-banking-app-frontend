@@ -11,7 +11,6 @@ export default function Home() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Проверяем, авторизован ли пользователь
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
@@ -150,7 +149,6 @@ export default function Home() {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, sans-serif;
         }
         
-        /* Стили для неавторизованных пользователей */
         .landing {
           display: flex;
           flex-direction: column;
@@ -223,7 +221,6 @@ export default function Home() {
           color: #666;
         }
         
-        /* Стили для авторизованных пользователей */
         .dashboard {
           display: flex;
           flex-direction: column;

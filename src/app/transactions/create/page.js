@@ -392,7 +392,7 @@ export default function TransferPage() {
       <Navbar />
       <div className="content-wrapper">
         <div className="transfer-container">
-          <div className="transfer-header">
+          <div className={`transfer-header ${searchParams.get('type') === 'deposit' ? 'deposit' : ''}`}>
             <h1>{searchParams.get('type') === 'deposit' ? 'Пополнение счета' : 'Перевод средств'}</h1>
             <Link 
               href={account ? `/accounts/${account.id}` : '/accounts'} 
@@ -451,6 +451,16 @@ export default function TransferPage() {
               {searchParams.get('type') === 'deposit' ? (
                 // Форма пополнения счета
                 <>
+                  <div className="info-box deposit-info">
+                    <div className="info-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                      </svg>
+                    </div>
+                    <p>Вы находитесь в разделе пополнения счета. Выберите способ пополнения.</p>
+                  </div>
+                
                   <div className="transfer-type-selector">
                     <div 
                       className={`transfer-type-option ${transferType === 'my' ? 'active' : ''}`}
@@ -478,7 +488,6 @@ export default function TransferPage() {
                   </div>
 
                   <form onSubmit={handleSubmit} className="transfer-form">
-                    {/* Пополнение со своих счетов */}
                     {transferType === 'my' && (
                       <>
                         <div className="form-group">
@@ -548,7 +557,6 @@ export default function TransferPage() {
                       </>
                     )}
                     
-                    {/* Создать ссылку для пополнения */}
                     {transferType === 'link' && (
                       <div className="form-group">
                         <div className="link-info">
@@ -680,7 +688,6 @@ export default function TransferPage() {
                   </div>
                   
                   <form onSubmit={handleSubmit} className="transfer-form">
-                    {/* На свой счет */}
                     {transferType === 'my' && (
                       <div className="form-group">
                         <label htmlFor="targetAccountId">Выберите счет получателя</label>
@@ -708,7 +715,6 @@ export default function TransferPage() {
                       </div>
                     )}
                     
-                    {/* По email */}
                     {transferType === 'email' && (
                       <div className="form-group">
                         <label htmlFor="email">Email получателя</label>
@@ -775,7 +781,6 @@ export default function TransferPage() {
                       </div>
                     )}
                     
-                    {/* По номеру карты */}
                     {transferType === 'card' && (
                       <div className="form-group">
                         <label htmlFor="cardNumber">Номер карты</label>
@@ -814,7 +819,6 @@ export default function TransferPage() {
                       </div>
                     )}
                     
-                    {/* Создать ссылку */}
                     {transferType === 'link' && (
                       <div className="form-group">
                         <div className="link-info">
@@ -880,8 +884,7 @@ export default function TransferPage() {
                       </div>
                     )}
                     
-                    {/* Общие поля для всех типов переводов (кроме ссылки) */}
-                    {transferType !== 'link' && (
+                    {(transferType === 'my' || transferType === 'email' || transferType === 'card') && (
                       <>
                         <div className="form-group">
                           <label htmlFor="amount">Сумма перевода</label>
@@ -977,13 +980,38 @@ export default function TransferPage() {
         
         .transfer-container {
           width: 100%;
-          max-width: 700px;
-          animation: fadeIn 0.5s ease-out;
+          max-width: 750px;
+          background-color: #fff;
+          border-radius: 16px;
+          padding: 30px;
+          margin-bottom: 30px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        .info-box {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 24px;
+        }
+        
+        .deposit-info {
+          background-color: #e8f5e9;
+          border-left: 4px solid #43A047;
+          color: #2e7d32;
+        }
+        
+        .info-box .info-icon {
+          color: #43A047;
+          flex-shrink: 0;
+        }
+        
+        .info-box p {
+          margin: 0;
+          font-size: 0.95rem;
+          line-height: 1.4;
         }
         
         .transfer-header {
@@ -991,13 +1019,19 @@ export default function TransferPage() {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e5e7eb;
         }
         
-        h1 {
-          font-size: 28px;
+        .transfer-header h1 {
+          font-size: 24px;
           font-weight: 700;
-          margin: 0;
           color: #2d3748;
+          margin: 0;
+        }
+        
+        .transfer-header.deposit h1 {
+          color: #43A047;
         }
         
         .back-button {

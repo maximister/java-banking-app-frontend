@@ -17,6 +17,7 @@ export default function AccountDetails({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [isCardCreating, setIsCardCreating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -128,6 +129,65 @@ export default function AccountDetails({ params }) {
 
   const handleCardFlip = () => {
     setIsCardFlipped(!isCardFlipped);
+  };
+  
+  const handleIssueCard = async () => {
+    try {
+      setIsCardCreating(true);
+      
+      // Получаем данные пользователя из localStorage
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        throw new Error('Данные пользователя не найдены');
+      }
+      
+      const user = JSON.parse(userData);
+      
+      // Извлекаем имя и фамилию пользователя
+      let firstName = user.firstName || user.firstname || '';
+      let lastName = user.lastName || user.lastname || '';
+      
+      // Транслитерация имени и фамилии, если они на кириллице
+      // Простая транслитерация - для настоящего решения лучше использовать библиотеку
+      const transliterate = (text) => {
+        const chars = {
+          'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+          'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+          'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+          'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+          'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+        return text.toLowerCase().split('').map(char => {
+          return chars[char] || chars[char.toLowerCase()] || char;
+        }).join('').replace(/\b\w/g, l => l.toUpperCase());
+      };
+      
+      // Проверяем, не содержат ли имя и фамилия кириллицу, и если да - транслитерируем
+      if (!/^[A-Za-z\s-]+$/.test(firstName)) {
+        firstName = transliterate(firstName);
+      }
+      
+      if (!/^[A-Za-z\s-]+$/.test(lastName)) {
+        lastName = transliterate(lastName);
+      }
+      
+      // Создаем новую карту для текущего счета
+      await apiProxy.post('/cards', {
+        accountId: id,
+        holderFirstName: firstName,
+        holderLastName: lastName
+      });
+      
+      // После успешного создания карты обновляем данные
+      const cardData = await apiProxy.get(`/cards/account/${id}`);
+      setCard(cardData);
+      
+    } catch (err) {
+      console.error('Ошибка при выпуске карты:', err);
+      alert('Не удалось выпустить карту. Пожалуйста, попробуйте позже.');
+    } finally {
+      setIsCardCreating(false);
+    }
   };
 
   if (loading) {
@@ -297,8 +357,12 @@ export default function AccountDetails({ params }) {
                 </svg>
               </div>
               <p>К этому счету пока не привязана карта</p>
-              <button className="issue-card-button">
-                Выпустить карту
+              <button 
+                className="issue-card-button" 
+                onClick={handleIssueCard} 
+                disabled={isCardCreating}
+              >
+                {isCardCreating ? 'Выпуск карты...' : 'Выпустить карту'}
               </button>
             </div>
           )}
@@ -330,7 +394,6 @@ export default function AccountDetails({ params }) {
                         <div className="transaction-type">
                           {getTransactionTypeLabel(transaction.type)}
                         </div>
-                        <div className="transaction-date">{new Date(transaction.timestamp).toLocaleDateString()}</div>
                       </div>
                       <div className="transaction-amount-section">
                         <span className={`transaction-amount ${getAmountStyleClass(transaction.type)}`}>
