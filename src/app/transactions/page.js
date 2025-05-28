@@ -244,7 +244,7 @@ export default function TransactionsHistory() {
               {Object.keys(accounts).length > 0 ? (
                 <p>Для совершения операций воспользуйтесь функциями пополнения или перевода средств</p>
               ) : (
-                <p>Для начала работы откройте счет в разделе "Счета"</p>
+                <p>Для начала работы откройте счет в разделе &quot;Счета&quot;</p>
               )}
               <Link href="/accounts" className="primary-button">
                 Перейти к счетам

@@ -18,31 +18,25 @@ export default function Register() {
     setServerError('');
     
     try {
-      // Форматируем данные в соответствии с требованиями бэкенда
       const formattedData = {
-        // Исправляем имена полей в соответствии с серверной моделью
         firstname: data.firstName,
         lastname: data.lastName,
         dateOfBirth: data.birthDate ? new Date(data.birthDate).toISOString().split('T')[0] : null,
         email: data.email,
         username: data.username,
         password: data.password,
-        // Добавляем дополнительные поля для бэкенда
         active: true,
         enabled: true,
         roles: ["USER"]
       };
       
-      // Удаляем поле подтверждения пароля, оно не нужно на бэкенде
       delete formattedData.passwordConfirm;
       
       console.log('Отправляемые данные для создания пользователя:', formattedData);
       
-      // 1. Регистрируем пользователя
       const userResponse = await apiProxy.post('/users/create', formattedData);
       console.log('Пользователь успешно создан:', userResponse);
       
-      // 2. Выполняем авторизацию после регистрации пользователя
       const loginResponse = await apiProxy.post('/authentication/login', {
         username: data.username,
         password: data.password
@@ -54,16 +48,12 @@ export default function Register() {
         responseKeys: Object.keys(loginResponse)
       });
       
-      // Проверяем наличие токена в ответе (поле jwt, а не token)
       if (!loginResponse.jwt) {
         throw new Error('Не удалось получить токен авторизации после регистрации');
       }
       
-      // Сохраняем токен авторизации
       localStorage.setItem('token', loginResponse.jwt);
       
-      // 3. Создаем клиента - привязываем пользователя к клиентской записи
-      // Готовим данные для создания клиента в соответствии с контрактом бэкенда
       const clientData = {
         firstname: data.firstName,
         lastname: data.lastName,
@@ -74,23 +64,18 @@ export default function Register() {
       console.log('Отправляемые данные для создания клиента:', clientData);
       
       try {
-        // Отправляем запрос в клиентский сервис на правильный URL (/customers/create)
         const clientResponse = await apiProxy.post('/customers/create', clientData);
         console.log('Клиент успешно создан:', clientResponse);
       } catch (clientError) {
         console.error('Ошибка при создании клиента:', clientError);
-        // Не выбрасываем ошибку, так как пользователь уже создан и авторизован
       }
       
-      // 4. Получаем информацию о профиле пользователя
       try {
         const profileResponse = await apiProxy.get('/users/profile');
         console.log('Профиль пользователя получен:', profileResponse);
-        // Сохраняем данные пользователя
         localStorage.setItem('user', JSON.stringify(profileResponse));
       } catch (profileError) {
         console.error('Ошибка при получении профиля:', profileError);
-        // Если не удалось получить профиль, сохраняем базовую информацию
         localStorage.setItem('user', JSON.stringify({ 
           firstname: data.firstName,
           lastname: data.lastName,
@@ -100,7 +85,6 @@ export default function Register() {
         }));
       }
       
-      // Перенаправляем на страницу личного кабинета
       router.push('/personal-account');
     } catch (error) {
       console.error('Registration error:', error);

@@ -200,7 +200,7 @@ export default function Cards() {
                 </svg>
               </div>
               <h3>У вас пока нет выпущенных карт</h3>
-              <p>Чтобы выпустить карту, перейдите на страницу счета и нажмите кнопку "Выпустить карту"</p>
+              <p>Чтобы выпустить карту, перейдите на страницу счета и нажмите кнопку &quot;Выпустить карту&quot;</p>
               <Link href="/accounts" className="primary-button">
                 Перейти к счетам
               </Link>
@@ -216,13 +216,16 @@ export default function Cards() {
                           <CardChip />
                           <div className="card-type-logo">{card.cardType}</div>
                         </div>
-                                                <div className="card-number">                          {card.cardNumber}                        </div>
+                        <div className="card-number">{card.cardNumber}</div>
                         <div className="card-bottom-row">
                           <div className="card-holder">
                             <div className="card-label">ДЕРЖАТЕЛЬ КАРТЫ</div>
                             <div className="card-holder-name">{card.holderFirstName} {card.holderLastName}</div>
                           </div>
-                                                    <div className="card-expires">                            <div className="card-label">СРОК ДО</div>                            <div className="card-expire-date">05/29</div>                          </div>
+                          <div className="card-expires">
+                            <div className="card-label">СРОК ДО</div>
+                            <div className="card-expire-date">05/29</div>
+                          </div>
                         </div>
                         <div className="bank-logo">JBank</div>
                       </div>

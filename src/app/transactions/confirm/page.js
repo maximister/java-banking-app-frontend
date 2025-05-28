@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import apiProxy from '../../utils/apiProxy';
 import Navbar from '../../components/Navbar';
 
-export default function ConfirmTransactionPage() {
+function ConfirmTransactionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -18,23 +18,20 @@ export default function ConfirmTransactionPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Проверяем авторизацию
     const authToken = localStorage.getItem('token');
     
     if (!authToken) {
-      // Сохраняем текущий URL для возврата после авторизации
       localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
       router.push('/login?reason=auth_required');
       return;
     }
     
-    // Получаем параметры из URL
     const accountId = searchParams.get('accountId');
     const amount = searchParams.get('amount');
     const description = searchParams.get('description');
     const details = searchParams.get('details');
-    const operationType = searchParams.get('type'); // Тип операции (deposit или null/transfer)
-    const cardNumber = searchParams.get('card'); // Номер карты (если есть)
+    const operationType = searchParams.get('type');
+    const cardNumber = searchParams.get('card');
     
     if (!accountId) {
       setError('Отсутствуют необходимые параметры для выполнения транзакции');
@@ -42,17 +39,15 @@ export default function ConfirmTransactionPage() {
       return;
     }
     
-    // Формируем данные транзакции
     const data = {
       accountId,
-      amount: amount || '', // Для ссылок сумма может быть не указана
+      amount: amount || '',
       description: description || (operationType === 'deposit' ? 'Пополнение счета' : 'Перевод в другой банк'),
       bankDetails: details ? decodeURIComponent(details) : '',
-      operationType: operationType || 'transfer', // Сохраняем тип операции
-      cardNumber // Сохраняем номер карты, если он передан
+      operationType: operationType || 'transfer',
+      cardNumber
     };
     
-    // Загружаем данные счета отправителя
     fetchAccountData(accountId, data);
   }, [searchParams, router]);
 
@@ -75,7 +70,6 @@ export default function ConfirmTransactionPage() {
     setError(null);
     
     try {
-      // Проверяем наличие суммы в параметрах
       if (!transactionData.amount) {
         throw new Error('Сумма не указана. Вернитесь к отправителю и попросите указать сумму перевода.');
       }
@@ -84,27 +78,22 @@ export default function ConfirmTransactionPage() {
         throw new Error('Сумма перевода должна быть больше нуля.');
       }
       
-      // Проверяем достаточно ли средств только для операций списания
       if (transactionData.operationType !== 'deposit' && parseFloat(transactionData.amount) > account.balance) {
         throw new Error('Недостаточно средств на счете');
       }
       
-      // Определяем тип транзакции в зависимости от операции
       let transactionType = 'TRANSFER_OUT';
       let transactionDescription = 'Перевод в другой банк';
       
-      // Если это операция пополнения, меняем тип
       if (transactionData.operationType === 'deposit') {
         transactionType = 'DEPOSIT';
         transactionDescription = 'Пополнение счета';
       }
       
-      // Если есть информация о карте, добавляем ее в описание
       if (transactionData.cardNumber) {
         transactionDescription = `${transactionData.operationType === 'deposit' ? 'Пополнение с карты' : 'Перевод на карту'} ${transactionData.cardNumber}`;
       }
       
-      // Создаем транзакцию
       const transaction = {
         accountId: transactionData.accountId,
         amount: parseFloat(transactionData.amount),
@@ -115,7 +104,6 @@ export default function ConfirmTransactionPage() {
       await apiProxy.post('/transactions', transaction);
       
       setSuccess(true);
-      // Перенаправляем на счет через 3 секунды после успешной транзакции
       setTimeout(() => {
         router.push(`/accounts/${transactionData.accountId}`);
       }, 3000);
@@ -607,7 +595,24 @@ export default function ConfirmTransactionPage() {
             flex-direction: column-reverse;
           }
         }
+        
+        .loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          font-size: 1.5rem;
+          color: #43A047;
+        }
       `}</style>
     </div>
+  );
+}
+
+export default function ConfirmTransactionPage() {
+  return (
+    <Suspense fallback={<div className="loading">Загрузка...</div>}>
+      <ConfirmTransactionContent />
+    </Suspense>
   );
 } 

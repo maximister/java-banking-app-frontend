@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'react-qr-code';
 import apiProxy from '../../utils/apiProxy';
 import Navbar from '../../components/Navbar';
 
-export default function TransferPage() {
+function TransferPageContent() {
   const searchParams = useSearchParams();
   const sourceAccountId = searchParams.get('accountId');
   const router = useRouter();
@@ -36,7 +36,6 @@ export default function TransferPage() {
   const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
-    // Проверка авторизации
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     
@@ -51,48 +50,47 @@ export default function TransferPage() {
     }
     
     // Загрузка данных счета для отображения информации
-    fetchAccountData();
+    const fetchAccountData = async () => {
+      if (!sourceAccountId) return;
+      
+      try {
+        const accountData = await apiProxy.get(`/accounts/${sourceAccountId}`);
+        setAccount(accountData);
+      } catch (err) {
+        console.error('Ошибка при получении данных счета:', err);
+        setError('Не удалось загрузить данные счета. Пожалуйста, попробуйте позже.');
+      }
+    };
     
     // Загрузка всех счетов пользователя (для перевода между своими счетами)
+    const fetchUserAccounts = async () => {
+      try {
+        // Получаем данные о пользователе из localStorage
+        const userData = localStorage.getItem('user');
+        if (!userData) return;
+        
+        const user = JSON.parse(userData);
+        const customerId = user.customerId || user.id;
+        
+        if (!customerId) {
+          console.error('Не удалось получить ID клиента');
+          return;
+        }
+        
+        // Получаем все счета пользователя
+        const accounts = await apiProxy.get(`/accounts/customer/${customerId}`);
+        
+        // Отфильтровываем текущий счет из списка 
+        const filteredAccounts = accounts ? accounts.filter(acc => acc.id !== parseInt(sourceAccountId)) : [];
+        setUserAccounts(filteredAccounts);
+      } catch (err) {
+        console.error('Ошибка при получении счетов пользователя:', err);
+      }
+    };
+    
+    fetchAccountData();
     fetchUserAccounts();
   }, [sourceAccountId, router]);
-
-  const fetchAccountData = async () => {
-    if (!sourceAccountId) return;
-    
-    try {
-      const accountData = await apiProxy.get(`/accounts/${sourceAccountId}`);
-      setAccount(accountData);
-    } catch (err) {
-      console.error('Ошибка при получении данных счета:', err);
-      setError('Не удалось загрузить данные счета. Пожалуйста, попробуйте позже.');
-    }
-  };
-
-  const fetchUserAccounts = async () => {
-    try {
-      // Получаем данные о пользователе из localStorage
-      const userData = localStorage.getItem('user');
-      if (!userData) return;
-      
-      const user = JSON.parse(userData);
-      const customerId = user.customerId || user.id;
-      
-      if (!customerId) {
-        console.error('Не удалось получить ID клиента');
-        return;
-      }
-      
-      // Получаем все счета пользователя
-      const accounts = await apiProxy.get(`/accounts/customer/${customerId}`);
-      
-      // Отфильтровываем текущий счет из списка 
-      const filteredAccounts = accounts ? accounts.filter(acc => acc.id !== parseInt(sourceAccountId)) : [];
-      setUserAccounts(filteredAccounts);
-    } catch (err) {
-      console.error('Ошибка при получении счетов пользователя:', err);
-    }
-  };
 
   const handleClientSearch = async () => {
     if (!formData.email) {
@@ -1499,7 +1497,24 @@ export default function TransferPage() {
             width: 100%;
           }
         }
+        
+        .loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          font-size: 1.5rem;
+          color: #43A047;
+        }
       `}</style>
     </div>
+  );
+}
+
+export default function TransferPage() {
+  return (
+    <Suspense fallback={<div className="loading">Загрузка...</div>}>
+      <TransferPageContent />
+    </Suspense>
   );
 } 

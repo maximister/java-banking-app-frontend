@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import apiProxy from '../../utils/apiProxy';
 
-export default function DepositPage() {
+function DepositPageContent() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get('accountId');
   const router = useRouter();
@@ -40,8 +40,33 @@ export default function DepositPage() {
       fetchAccountData(accountId);
     }
     
+    const fetchUserAccounts = async () => {
+      try {
+        const userData = localStorage.getItem('user');
+        if (!userData) return;
+        
+        const user = JSON.parse(userData);
+        const customerId = user.customerId || user.id;
+        
+        if (!customerId) {
+          console.error('Не удалось получить ID клиента');
+          return;
+        }
+        
+        const accounts = await apiProxy.get(`/accounts/customer/${customerId}`);
+        setUserAccounts(accounts || []);
+        
+        if (!account && accounts && accounts.length > 0) {
+          setFormData(prev => ({ ...prev, targetAccountId: accounts[0].id }));
+          fetchAccountData(accounts[0].id);
+        }
+      } catch (err) {
+        console.error('Ошибка при получении счетов пользователя:', err);
+      }
+    };
+    
     fetchUserAccounts();
-  }, [accountId, router]);
+  }, [accountId, router, account]);
 
   const fetchAccountData = async (id) => {
     if (!id) return;
@@ -52,31 +77,6 @@ export default function DepositPage() {
     } catch (err) {
       console.error('Ошибка при получении данных счета:', err);
       setError('Не удалось загрузить данные счета. Пожалуйста, попробуйте позже.');
-    }
-  };
-
-  const fetchUserAccounts = async () => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (!userData) return;
-      
-      const user = JSON.parse(userData);
-      const customerId = user.customerId || user.id;
-      
-      if (!customerId) {
-        console.error('Не удалось получить ID клиента');
-        return;
-      }
-      
-      const accounts = await apiProxy.get(`/accounts/customer/${customerId}`);
-      setUserAccounts(accounts || []);
-      
-      if (!account && accounts && accounts.length > 0) {
-        setFormData(prev => ({ ...prev, targetAccountId: accounts[0].id }));
-        fetchAccountData(accounts[0].id);
-      }
-    } catch (err) {
-      console.error('Ошибка при получении счетов пользователя:', err);
     }
   };
 
@@ -774,7 +774,24 @@ export default function DepositPage() {
             flex-direction: column;
           }
         }
+        
+        .loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          font-size: 1.5rem;
+          color: #43A047;
+        }
       `}</style>
     </div>
+  );
+}
+
+export default function DepositPage() {
+  return (
+    <Suspense fallback={<div className="loading">Загрузка...</div>}>
+      <DepositPageContent />
+    </Suspense>
   );
 } 

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import apiProxy from '../../utils/apiProxy';
 
-export default function CreateCardPage() {
+function CreateCardPageContent() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get('accountId');
   const router = useRouter();
@@ -26,46 +26,21 @@ export default function CreateCardPage() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Проверка авторизации
     const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
     
-    if (!token || !userData) {
+    if (!token) {
       router.push('/login');
       return;
     }
     
     try {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      
-      // Предзаполняем имя и фамилию держателя карты, если доступно
-      if (parsedUser.firstname && parsedUser.lastname) {
-        const firstName = parsedUser.firstname.toUpperCase();
-        const lastName = parsedUser.lastname.toUpperCase();
-        
-        setFormData(prev => ({
-          ...prev,
-          holderFirstName: firstName,
-          holderLastName: lastName
-        }));
-        
-        // Проверяем автоматически предзаполненные поля на соответствие латинице
-        const latinRegex = /^[A-Za-z\s\-']+$/;
-        const newFormErrors = {};
-        
-        if (!latinRegex.test(firstName)) {
-          newFormErrors.holderFirstName = 'Имя должно содержать только латинские буквы';
-        }
-        
-        if (!latinRegex.test(lastName)) {
-          newFormErrors.holderLastName = 'Фамилия должна содержать только латинские буквы';
-        }
-        
-        if (Object.keys(newFormErrors).length > 0) {
-          setFormErrors(newFormErrors);
-        }
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        router.push('/login');
+        return;
       }
+      
+      JSON.parse(userData);
     } catch (err) {
       console.error('Ошибка при парсинге данных пользователя', err);
     }
@@ -77,25 +52,25 @@ export default function CreateCardPage() {
     }
     
     // Загрузка данных счета для отображения информации
+    const fetchAccountData = async () => {
+      if (!accountId) {
+        setPageLoading(false);
+        return;
+      }
+      
+      try {
+        const accountData = await apiProxy.get(`/accounts/${accountId}`);
+        setAccount(accountData);
+      } catch (err) {
+        console.error('Ошибка при получении данных счета:', err);
+        setError('Не удалось загрузить данные счета. Пожалуйста, попробуйте позже.');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    
     fetchAccountData();
   }, [accountId, router]);
-
-  const fetchAccountData = async () => {
-    if (!accountId) {
-      setPageLoading(false);
-      return;
-    }
-    
-    try {
-      const accountData = await apiProxy.get(`/accounts/${accountId}`);
-      setAccount(accountData);
-    } catch (err) {
-      console.error('Ошибка при получении данных счета:', err);
-      setError('Не удалось загрузить данные счета. Пожалуйста, попробуйте позже.');
-    } finally {
-      setPageLoading(false);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -509,5 +484,13 @@ export default function CreateCardPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function CreateCardPage() {
+  return (
+    <Suspense fallback={<div className="loading">Загрузка...</div>}>
+      <CreateCardPageContent />
+    </Suspense>
   );
 } 

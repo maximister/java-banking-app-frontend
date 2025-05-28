@@ -1,44 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import apiProxy from '../utils/apiProxy';
 import Navbar from '../components/Navbar';
 
-export default function Login() {
+function LoginContent() {
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
-  const [verificationStep, setVerificationStep] = useState('initial'); // initial, codeSent
+  const [verificationStep, setVerificationStep] = useState('initial');
   const [verificationError, setVerificationError] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Используем watch для отслеживания значения поля username
   const username = watch('username', '');
   
   useEffect(() => {
-    // Если в URL есть параметр reason=auth_failed, показываем ошибку авторизации
     const reason = searchParams.get('reason');
     if (reason === 'auth_failed') {
       setServerError('Сессия истекла или требуется повторная авторизация');
     }
     
-    // Очищаем данные о прошлой сессии при входе
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }, [searchParams]);
 
   const requestVerification = async () => {
     if (!username) {
-      return; // Просто выходим без показа ошибки
+      return;
     }
     
     setIsLoading(true);
-    setVerificationError(''); // Очищаем предыдущие ошибки
+    setVerificationError('');
     
     try {
       await apiProxy.get(`/passwords/verify/${username}`);
@@ -46,7 +43,6 @@ export default function Login() {
       setVerificationStep('codeSent');
     } catch (error) {
       console.error('Verification request error:', error);
-      // Не показываем ошибку пользователю, только логируем
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +56,6 @@ export default function Login() {
       return;
     }
     
-    // Проверка на тестовый код
     if (code === '563974') {
       setIsVerified(true);
       setVerificationError('');
@@ -94,7 +89,6 @@ export default function Login() {
     try {
       console.log('Отправка запроса на авторизацию:', data.username);
       
-      // Используем прокси API для аутентификации пользователя
       const response = await apiProxy.post('/authentication/login', {
         username: data.username,
         password: data.password
@@ -110,11 +104,9 @@ export default function Login() {
         throw new Error('Сервер не вернул токен авторизации');
       }
       
-      // Сохраняем токен в localStorage
       localStorage.setItem('token', response.jwt);
       
       try {
-        // Получаем информацию о пользователе после авторизации
         const userInfoResponse = await apiProxy.get('/users/profile');
         
         console.log('Получены данные пользователя:', {
@@ -122,14 +114,11 @@ export default function Login() {
           fields: userInfoResponse ? Object.keys(userInfoResponse) : []
         });
         
-        // Сохраняем данные пользователя
         localStorage.setItem('user', JSON.stringify(userInfoResponse));
         
-        // Перенаправляем на страницу личного кабинета
         router.push('/personal-account');
       } catch (profileError) {
         console.error('Ошибка при получении профиля:', profileError);
-        // Если не удалось получить профиль, но токен есть, все равно перенаправляем
         router.push('/personal-account');
       }
     } catch (error) {
@@ -435,7 +424,24 @@ export default function Login() {
             padding: 10px;
           }
         }
+        
+        .loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          font-size: 1.5rem;
+          color: #43A047;
+        }
       `}</style>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div className="loading">Загрузка...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 } 
