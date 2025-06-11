@@ -88,7 +88,20 @@ export default function Register() {
       router.push('/personal-account');
     } catch (error) {
       console.error('Registration error:', error);
-      setServerError(error.message || 'Ошибка при регистрации. Пожалуйста, попробуйте позже.');
+      
+      let errorData = error.response?.data || {};
+      const errorMessage = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+      
+      console.log('Error data:', errorData);
+      
+      if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('username')) {
+        setServerError("Неверное имя пользователя или почта, возможно, у вас уже есть аккаунт с такими данными");
+      } else if (errorData.dateOfBirth === "User does not meet the minimum age requirement" || 
+                (errorMessage.toLowerCase().includes('dateofbirth') && errorMessage.toLowerCase().includes('minimum age requirement'))) {
+        setServerError("Пожалуйста, укажите корректный возраст. К регистрации допускаются только лица старше 18 лет");
+      } else {
+        setServerError("Похоже что-то пошло не так. Пожалуйста, попробуйте снова");
+      }
     } finally {
       setIsLoading(false);
     }

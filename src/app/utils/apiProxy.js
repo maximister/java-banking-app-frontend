@@ -69,7 +69,9 @@ export async function fetchApi(url, method = 'GET', body = null, headers = {}) {
     }
     
     if (!response.ok) {
-      throw new Error(data.message || 'Произошла ошибка при обработке запроса');
+      const error = new Error(data.message || 'Произошла ошибка при обработке запроса');
+      error.response = { data, status: response.status };
+      throw error;
     }
     
     return data;
